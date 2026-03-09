@@ -19,6 +19,7 @@ interface FleetManagerProps {
   onAddBus: () => void;
   onRemoveBus: (id: string) => void;
   stats: Statistics | null;
+  highlightedBusId?: string | null;
 }
 
 // All enhanced features are now in the main Bus interface
@@ -28,8 +29,20 @@ const FleetManager: React.FC<FleetManagerProps> = ({
   onAddBus,
   onRemoveBus,
   stats,
+  highlightedBusId,
 }) => {
   const [loading, setLoading] = useState(false);
+  const busRefs = React.useRef<{ [key: string]: HTMLDivElement | null }>({});
+
+  // Error handling for scrolling (Priority 5)
+  React.useEffect(() => {
+    if (highlightedBusId && busRefs.current[highlightedBusId]) {
+      busRefs.current[highlightedBusId]?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }
+  }, [highlightedBusId]);
 
   const totalBuses = buses?.length || 0;
   const activeBuses = buses?.filter((bus) => bus.state !== "IDLE").length || 0;
@@ -99,9 +112,19 @@ const FleetManager: React.FC<FleetManagerProps> = ({
       <div className="space-y-3">
         {buses.map((bus) => {
           const occupancy = bus.capacity ? ((bus.passengers?.length || 0) / bus.capacity) * 100 : 0;
-          
+          const isHighlighted = bus.id === highlightedBusId;
+
           return (
-            <div key={bus.id} className="glass-enhanced p-4 rounded-xl border border-gray-200">
+            <div
+              key={bus.id}
+              ref={el => { busRefs.current[bus.id] = el }}
+              className={clsx(
+                "glass-enhanced p-4 rounded-xl border transition-all duration-500",
+                isHighlighted
+                  ? "border-blue-500 shadow-lg scale-[1.02] ring-2 ring-blue-200"
+                  : "border-gray-200"
+              )}
+            >
               {/* Bus Header */}
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
@@ -131,7 +154,7 @@ const FleetManager: React.FC<FleetManagerProps> = ({
                     {bus.current_route_id || "N/A"}
                   </div>
                 </div>
-                
+
                 <div className="glass-enhanced p-3 rounded-lg">
                   <div className="text-xs text-gray-500 mb-1 uppercase tracking-wide font-semibold">Capacity</div>
                   <div className="font-bold text-black">
@@ -155,8 +178,8 @@ const FleetManager: React.FC<FleetManagerProps> = ({
                       occupancy > 0.8
                         ? "bg-gradient-to-r from-red-400 to-red-600"
                         : occupancy > 0.5
-                        ? "bg-gradient-to-r from-amber-400 to-amber-600"
-                        : "bg-gradient-to-r from-green-400 to-green-600"
+                          ? "bg-gradient-to-r from-amber-400 to-amber-600"
+                          : "bg-gradient-to-r from-green-400 to-green-600"
                     )}
                     style={{ width: `${Math.min(occupancy, 100)}%` }}
                   />
@@ -166,7 +189,7 @@ const FleetManager: React.FC<FleetManagerProps> = ({
           );
         })}
       </div>
-      
+
       {buses.length === 0 && (
         <div className="text-center py-12">
           <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gray-100 flex items-center justify-center">

@@ -3,6 +3,7 @@
 import React from "react";
 import { Play, Pause, RotateCcw, Brain, Zap, Activity } from "lucide-react";
 import { Statistics } from "../../types";
+import clsx from "clsx";
 
 interface ControlPanelProps {
   isRunning: boolean;
@@ -55,11 +56,10 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
         <button
           onClick={() => onStart(useTrained)}
           disabled={isRunning}
-          className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold transition-all duration-200 ${
-            isRunning
-              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-              : "bg-green-600 text-white hover:bg-green-700 shadow-md hover:shadow-lg active:transform active:scale-95"
-          }`}
+          className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold transition-all duration-200 ${isRunning
+            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+            : "bg-green-600 text-white hover:bg-green-700 shadow-md hover:shadow-lg active:transform active:scale-95"
+            }`}
         >
           <Play className="w-4 h-4" fill="currentColor" />
           Start
@@ -68,11 +68,10 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
         <button
           onClick={onStop}
           disabled={!isRunning}
-          className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold transition-all duration-200 ${
-            !isRunning
-              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-              : "bg-red-500 text-white hover:bg-red-600 shadow-md hover:shadow-lg active:transform active:scale-95"
-          }`}
+          className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold transition-all duration-200 ${!isRunning
+            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+            : "bg-red-500 text-white hover:bg-red-600 shadow-md hover:shadow-lg active:transform active:scale-95"
+            }`}
         >
           <Pause className="w-4 h-4" fill="currentColor" />
           Stop
@@ -87,9 +86,30 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
         Reset System
       </button>
 
-      {/* Advanced Options */}
-      <div className="bg-blue-50/50 rounded-lg p-4 border border-blue-100">
-        <label className="flex items-center gap-3 cursor-pointer group">
+      {/* AI Mode Toggle */}
+      <div className={clsx(
+        "rounded-lg p-4 border transition-all duration-300",
+        useTrained
+          ? "bg-purple-50 border-purple-200 shadow-sm"
+          : "bg-gray-50 border-gray-100"
+      )}>
+        <label className="flex items-center justify-between cursor-pointer group">
+          <div className="flex items-center gap-3">
+            <div className={clsx(
+              "w-8 h-8 rounded-lg flex items-center justify-center transition-colors",
+              useTrained ? "bg-purple-600 text-white" : "bg-gray-200 text-gray-500"
+            )}>
+              {useTrained ? <Zap className="w-4 h-4" /> : <Brain className="w-4 h-4" />}
+            </div>
+            <div>
+              <span className="text-sm font-bold text-gray-800 block">
+                {useTrained ? "AI Optimization" : "Baseline Schedule"}
+              </span>
+              <span className="text-[10px] text-gray-500">
+                {useTrained ? "PPO MARL Active" : "Fixed Interval Rules"}
+              </span>
+            </div>
+          </div>
           <div className="relative">
             <input
               type="checkbox"
@@ -98,12 +118,8 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
               disabled={isRunning}
               className="sr-only peer"
             />
-            <div className="w-10 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
           </div>
-          <span className="text-sm font-medium text-gray-700 flex items-center gap-2 group-hover:text-blue-700 transition-colors">
-            <Zap className="w-4 h-4 text-amber-500" />
-            Use Trained AI Agents
-          </span>
         </label>
       </div>
 
@@ -115,11 +131,10 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
         <button
           onClick={onTrain}
           disabled={isRunning || isTraining}
-          className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-all ${
-            isRunning || isTraining
-              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-              : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-md hover:shadow-lg"
-          }`}
+          className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-all ${isRunning || isTraining
+            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+            : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-md hover:shadow-lg"
+            }`}
         >
           <Brain className={`w-4 h-4 ${isTraining ? "animate-pulse" : ""}`} />
           {isTraining ? "Training in Progress..." : "Train Agents (100 Eps)"}
