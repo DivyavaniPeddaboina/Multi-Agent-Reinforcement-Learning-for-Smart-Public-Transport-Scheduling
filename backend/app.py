@@ -110,6 +110,7 @@ def index():
 def get_status():
     """Get current system status"""
     return jsonify({
+        'success': True,
         'simulation_running': traffic_env.simulation_running,
         'agents_initialized': traffic_env.agents_initialized,
         'num_buses': len(traffic_env.buses),
@@ -121,19 +122,23 @@ def get_status():
 def get_config():
     """Get system configuration"""
     return jsonify({
-        'num_buses': Config.NUM_BUSES,
-        'num_routes': Config.NUM_ROUTES,
-        'bus_capacity': Config.BUS_CAPACITY,
-        'simulation_speed': Config.SIMULATION_SPEED,
-        'update_interval': Config.UPDATE_INTERVAL,
-        'actions': Config.ACTIONS,
-        'map_center': Config.MAP_CENTER
+        'success': True,
+        'config': {
+            'num_buses': Config.NUM_BUSES,
+            'num_routes': Config.NUM_ROUTES,
+            'bus_capacity': Config.BUS_CAPACITY,
+            'simulation_speed': Config.SIMULATION_SPEED,
+            'update_interval': Config.UPDATE_INTERVAL,
+            'actions': Config.ACTIONS,
+            'map_center': Config.MAP_CENTER
+        }
     })
 
 @app.route('/api/routes', methods=['GET'])
 def get_routes():
     """Get all route information"""
     return jsonify({
+        'success': True,
         'routes': route_manager.get_all_routes_info()
     })
 
@@ -178,6 +183,7 @@ def get_road_paths():
 def get_stops():
     """Get all stop information"""
     return jsonify({
+        'success': True,
         'stops': route_manager.get_all_stops_info()
     })
 
@@ -185,6 +191,7 @@ def get_stops():
 def get_state():
     """Get complete current state"""
     state = traffic_env.get_state()
+    state['success'] = True
     return jsonify(state)
 
 @app.route('/api/statistics', methods=['GET'])
@@ -197,6 +204,7 @@ def get_statistics():
         agent_stats = coordinator.get_statistics()
         stats['agents'] = agent_stats
     
+    stats['success'] = True
     return jsonify(stats)
 
 @app.route('/api/simulation/start', methods=['POST'])
@@ -206,13 +214,21 @@ def start_simulation():
     
     system_logger.info("SIM-START: Request received")
     
-    if traffic_env.simulation_running:
+    # Check if simulation is actually running by checking thread
+    is_alive = simulation_thread is not None and simulation_thread.is_alive()
+    
+    if traffic_env.simulation_running and is_alive:
         system_logger.info("SIM-START: Already running")
         return jsonify({
-            'success': False,
+            'success': True,
             'message': 'Simulation already running'
-        }), 400
+        }), 200
     
+    # Reset internal state if it was "running" but thread died
+    if traffic_env.simulation_running and not is_alive:
+        system_logger.warning("SIM-START: State was 'running' but thread not alive. Resetting.")
+        traffic_env.simulation_running = False
+
     if len(traffic_env.buses) == 0:
         system_logger.info("Initializing default fleet on simulation start")
         traffic_env.reset()
@@ -221,8 +237,7 @@ def start_simulation():
         # Get optional parameters
         data = request.get_json(silent=True) or {}
         use_trained_agents = data.get('use_trained_agents', False)
-        print(f"Simulation start request: {data}")
-        system_logger.info(f"Simulation start request: {use_trained_agents}")
+        system_logger.info(f"Simulation start request parameters: {data}")
         
         # Initialize MARL agents per bus using imported function
         from agents.marl_agents import initialize_agents as init_marl_agents
@@ -236,19 +251,21 @@ def start_simulation():
         simulation_thread = threading.Thread(target=simulation_loop, args=(use_trained_agents,), daemon=True)
         simulation_thread.start()
         
-        system_logger.info("Simulation activated with PPO agents")
+        system_logger.info("Simulation activated")
         
         return jsonify({
             'success': True,
             'message': 'Simulation started',
-            'num_agents': len(traffic_env.agents)
+            'num_agents': len(traffic_env.agents),
+            'use_trained_agents': use_trained_agents
         })
     
     except Exception as e:
         system_logger.error(f"Error starting simulation: {e}")
+        traffic_env.simulation_running = False
         return jsonify({
             'success': False,
-            'message': str(e)
+            'message': f"Failed to start simulation: {str(e)}"
         }), 500
 
 @app.route('/api/simulation/stop', methods=['POST'])
@@ -427,7 +444,7 @@ def get_agent_decision(agent_id):
 @app.route('/api/training/start', methods=['POST'])
 def start_training():
     """Start training agents (background task)"""
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     num_episodes = data.get('num_episodes', 100)
     
     # Initialize trainer if needed

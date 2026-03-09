@@ -65,32 +65,63 @@ export const initializeSocket = () => {
 export const getSocket = () => socket;
 
 export const apiService = {
-  getStatus: async () => (await api.get<{ simulation_running: boolean }>('/api/status')).data,
-  getConfig: async () => (await api.get<unknown>('/api/config')).data, // Type later
-  getRoutes: async () => (await api.get<unknown>('/api/routes')).data,
-  getRoadPaths: async () => (await api.get<unknown>('/api/routes/road-paths')).data,
-  getStops: async () => (await api.get<{ stops: Stop[] }>('/api/stops')).data,
-  getState: async () => (await api.get<SimulationState>('/api/state')).data,
-  getStatistics: async () => (await api.get<Statistics>('/api/statistics')).data,
-  getBuses: async () => (await api.get<{ buses: Bus[] }>('/api/buses')).data,
+  getServiceData: async <T>(promise: Promise<any>): Promise<T> => {
+    const response = await promise;
+    return response.data as T;
+  },
+
+  getStatus: async () => apiService.getServiceData<{ success: boolean; simulation_running: boolean }>(api.get('/api/status')),
+
+  getConfig: async () => {
+    const data = await apiService.getServiceData<{ success: boolean; config: any }>(api.get('/api/config'));
+    return data.config;
+  },
+
+  getRoutes: async () => {
+    const data = await apiService.getServiceData<{ success: boolean; routes: any }>(api.get('/api/routes'));
+    return data.routes;
+  },
+
+  getRoadPaths: async () => {
+    const data = await apiService.getServiceData<{ success: boolean; road_paths: any }>(api.get('/api/routes/road-paths'));
+    return data.road_paths;
+  },
+
+  getStops: async () => {
+    const data = await apiService.getServiceData<{ success: boolean; stops: Stop[] }>(api.get('/api/stops'));
+    return data.stops;
+  },
+
+  getState: async () => apiService.getServiceData<SimulationState>(api.get('/api/state')),
+
+  getStatistics: async () => apiService.getServiceData<Statistics>(api.get('/api/statistics')),
+
+  getBuses: async () => {
+    const data = await apiService.getServiceData<{ success: boolean; buses: Bus[] }>(api.get('/api/buses'));
+    return data.buses;
+  },
 
   startSimulation: async (useTrained = false) =>
-    (await api.post<{ success: boolean; message: string }>('/api/simulation/start', { use_trained_agents: useTrained })).data,
+    apiService.getServiceData<{ success: boolean; message: string }>(
+      api.post('/api/simulation/start', { use_trained_agents: useTrained })
+    ),
 
   stopSimulation: async () =>
-    (await api.post<{ success: boolean; message: string }>('/api/simulation/stop')).data,
+    apiService.getServiceData<{ success: boolean; message: string }>(api.post('/api/simulation/stop')),
 
   resetSimulation: async () =>
-    (await api.post<{ success: boolean; message: string }>('/api/simulation/reset')).data,
+    apiService.getServiceData<{ success: boolean; message: string }>(api.post('/api/simulation/reset')),
 
   startTraining: async (numEpisodes = 100) =>
-    (await api.post<{ success: boolean; message: string }>('/api/training/start', { num_episodes: numEpisodes })).data,
+    apiService.getServiceData<{ success: boolean; message: string }>(
+      api.post('/api/training/start', { num_episodes: numEpisodes })
+    ),
 
   addBus: async () =>
-    (await api.post<{ success: boolean; message: string }>('/api/buses')).data,
+    apiService.getServiceData<{ success: boolean; message: string }>(api.post('/api/buses')),
 
   removeBus: async (busId: string) =>
-    (await api.delete<{ success: boolean; message: string }>(`/api/buses/${busId}`)).data,
+    apiService.getServiceData<{ success: boolean; message: string }>(api.delete(`/api/buses/${busId}`)),
 };
 
 export default apiService;
